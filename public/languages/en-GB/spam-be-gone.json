@@ -1,0 +1,21 @@
+{
+  "report-user": "Report spammer",
+  "something-went-wrong": "Something went wrong",
+  "not-allowed": "You are not allowed to perform this action",
+  "cant-report-admin": "You can't report an admin as spammer",
+  "user-reported": "User reported!",
+  "sfs-not-enabled": "Stop Forum Spam is not enabled",
+  "sfs-api-key-not-set": "Stop Forum Spam API Key is not set, get one from stopforumspam.com/keys",
+  "captcha-not-verified": "Captcha not verified, are you a robot?",
+  "admin-topic-start": "This plugin uses",
+  "admin-topic-end": "Submit pull requests or ideas at the the project repository",
+  "enable": "Enable",
+  "akismet-topic-1": "To check every user post. Get yours from ",
+  "akismet-topic-2": "Minimum reputation level to classify flagged posts as false positives (HAM). Posts made by users with at least this level reputation will never be flagged as spam.",
+  "akismet-topic-3": "Allow users with minimum reputation of X to submit posts to Akismet as spam via flagging (leave blank to disable)",
+  "honeypot-topic-1": "To check every user registration. Get yours from ",
+  "stopforumspam-topic-1": "To report a user you need an API key, get yours from ",
+  "turnstile-topic-1": "To check registrations (and optionally login). Create keys from ",
+  "turnstile-topic-2": "Keep your secret key private",
+  "enable-turnstile-login": "Enable Turnstile on login page as well"
+}
