@@ -4,7 +4,6 @@ const util = require('util');
 const https = require('https');
 const querystring = require('querystring');
 const Honeypot = require('project-honeypot');
-const stopforumspam = require('stopforumspam');
 
 const winston = require.main.require('winston');
 const nconf = require.main.require('nconf');
@@ -50,6 +49,71 @@ function getTurnstileConfigFromSettings(settings) {
 	};
 }
 
+
+
+function sfsRequest(path, method = 'GET', payload = null) {
+	return new Promise((resolve, reject) => {
+		const body = payload ? querystring.stringify(payload) : null;
+		const options = {
+			hostname: 'api.stopforumspam.org',
+			path,
+			method,
+			headers: {
+				'Accept': 'application/json',
+				'User-Agent': pluginData.id,
+			},
+		};
+		if (body) {
+			options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+			options.headers['Content-Length'] = Buffer.byteLength(body);
+		}
+		const req = https.request(options, (res) => {
+			let responseData = '';
+			res.on('data', (chunk) => { responseData += chunk; });
+			res.on('end', () => {
+				if (res.statusCode < 200 || res.statusCode >= 300) {
+					return reject(new Error(`StopForumSpam request failed (${res.statusCode})`));
+				}
+				try {
+					resolve(JSON.parse(responseData || '{}'));
+				} catch (err) {
+					reject(new Error('Invalid StopForumSpam response'));
+				}
+			});
+		});
+		req.on('error', reject);
+		if (body) {
+			req.write(body);
+		}
+		req.end();
+	});
+}
+
+async function sfsIsSpammer({ ip, email, username }) {
+	const params = { f: 'json' };
+	if (ip) { params.ip = ip; }
+	if (email) { params.email = email; }
+	if (username) { params.username = username; }
+	return await sfsRequest(`/api?${querystring.stringify(params)}`);
+}
+
+async function sfsSubmit({ ip, email, username }, evidence) {
+	if (!pluginSettings.stopforumspamApiKey) {
+		throw new Error('[[spam-be-gone:sfs-api-key-not-set]]');
+	}
+	const payload = {
+		api_key: pluginSettings.stopforumspamApiKey,
+		ip_addr: ip || '',
+		email: email || '',
+		username: username || '',
+		evidence: evidence || '',
+	};
+	const result = await sfsRequest('/add', 'POST', payload);
+	if (result && (result.success === 1 || result.success === true)) {
+		return result;
+	}
+	throw new Error((result && (result.error || result.message)) || 'StopForumSpam submit failed');
+}
 Plugin.middleware.isAdminOrGlobalMod = function (req, res, next) {
 	User.isAdminOrGlobalMod(req.uid, (err, isAdminOrGlobalMod) => {
 		if (err) {
@@ -100,9 +164,6 @@ Plugin.load = async function (params) {
 	if (!settings.akismetMinReputationHam) {
 		settings.akismetMinReputationHam = 10;
 	}
-	if (settings.stopforumspamApiKey) {
-		stopforumspam.Key(settings.stopforumspamApiKey);
-	}
 
 	pluginSettings = settings;
 
@@ -137,7 +198,7 @@ Plugin.report = async function (req, res, next) {
 		if (isAdmin) {
 			return res.status(403).send({ message: '[[spam-be-gone:cant-report-admin]]' });
 		}
-		await stopforumspam.submit({ ip: ips[0], email: fields.email, username: fields.username }, `Manual submission from user: ${req.uid} to user: ${fields.uid} via ${pluginData.id}`);
+		await sfsSubmit({ ip: ips[0], email: fields.email, username: fields.username }, `Manual submission from user: ${req.uid} to user: ${fields.uid} via ${pluginData.id}`);
 		res.status(200).json({ message: '[[spam-be-gone:user-reported]]' });
 	} catch (err) {
 		winston.error(`[plugins/${pluginData.nbbId}][report-error] ${err.message}`);
@@ -152,7 +213,7 @@ Plugin.reportFromQueue = async (req, res) => {
 	}
 	const submitData = { ip: data.ip, email: data.email, username: data.username };
 	try {
-		await stopforumspam.submit(submitData, `Manual submission from user: ${req.uid} to user: ${data.username} via ${pluginData.id}`);
+		await sfsSubmit(submitData, `Manual submission from user: ${req.uid} to user: ${data.username} via ${pluginData.id}`);
 		res.status(200).json({ message: '[[spam-be-gone:user-reported]]' });
 	} catch (err) {
 		winston.error(`[plugins/${pluginData.nbbId}][report-error] ${err.message}\n${JSON.stringify(submitData, null, 4)}`);
@@ -283,7 +344,7 @@ Plugin.getRegistrationQueue = async function (data) {
 async function augmentWitSpamData(user) {
 	try {
 		user.ip = user.ip.replace('::ffff:', '');
-		let body = await stopforumspam.isSpammer({ ip: user.ip, email: user.email, username: user.username, f: 'json' });
+		let body = await sfsIsSpammer({ ip: user.ip, email: user.email, username: user.username });
 		if (!body) {
 			body = { success: 1, username: { frequency: 0, appears: 0 }, email: { frequency: 0, appears: 0 }, ip: { frequency: 0, appears: 0, asn: null } };
 		}

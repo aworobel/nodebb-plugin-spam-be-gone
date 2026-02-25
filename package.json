@@ -1,6 +1,6 @@
 {
   "name": "@arnaudw38/nodebb-plugin-spam-be-gone",
-  "version": "1.0.1",
+  "version": "1.0.11",
   "description": "Anti-spam plugin for NodeBB 4.x using Akismet, StopForumSpam, ProjectHoneyPot, and Cloudflare Turnstile (Turnstile-only fork)",
   "main": "library.js",
   "scripts": {},
@@ -33,8 +33,7 @@
   },
   "dependencies": {
     "async": "^3.2.0",
-    "project-honeypot": "~0.0.0",
-    "stopforumspam": "^1.3.8"
+    "project-honeypot": "~0.0.0"
   },
   "nbbpm": {
     "compatibility": "^4.0.0"
