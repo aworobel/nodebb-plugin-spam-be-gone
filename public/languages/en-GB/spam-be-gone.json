@@ -36,5 +36,7 @@
   "turnstile-appearance": "Appearance",
   "sfs-enable": "Enable StopForumSpam",
   "sfs-api-key": "StopForumSpam API Key",
-  "turnstile-load-error": "Failed to load Cloudflare Turnstile"
+  "turnstile-load-error": "Failed to load Cloudflare Turnstile",
+  "akismet-spam-detected": "Your post was identified as spam.",
+  "sfs-submit-failed": "StopForumSpam submission failed"
 }

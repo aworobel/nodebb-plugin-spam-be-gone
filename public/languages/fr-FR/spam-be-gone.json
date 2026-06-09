@@ -36,5 +36,7 @@
   "turnstile-appearance": "Apparence",
   "sfs-enable": "Activer StopForumSpam",
   "sfs-api-key": "Clé API StopForumSpam",
-  "turnstile-load-error": "Impossible de charger Cloudflare Turnstile"
+  "turnstile-load-error": "Impossible de charger Cloudflare Turnstile",
+  "akismet-spam-detected": "Votre message a été identifié comme spam.",
+  "sfs-submit-failed": "Échec de l'envoi à StopForumSpam"
 }

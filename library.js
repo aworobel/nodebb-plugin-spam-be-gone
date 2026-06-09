@@ -119,7 +119,7 @@ async function sfsSubmit({ ip, email, username }, evidence) {
 	if (result && (result.success === 1 || result.success === true)) {
 		return result;
 	}
-	throw new Error((result && (result.error || result.message)) || 'StopForumSpam submit failed');
+	throw new Error((result && (result.error || result.message)) || '[[spam-be-gone:sfs-submit-failed]]');
 }
 
 // ---------------------------------------------------------------------------
@@ -218,20 +218,23 @@ Plugin.load = async function (params) {
 	);
 
 	// NodeBB's noScriptErrors logs all hook-thrown errors at `error` level.
-	// Patch it to silently pass through expected spam-be-gone user errors.
+	// Patch it to translate spam-be-gone errors in the user's language instead.
 	if (!_noScriptErrorsPatched) {
 		_noScriptErrorsPatched = true;
 		const helpersController = require.main.require('./src/controllers/helpers');
 		if (typeof helpersController.noScriptErrors === 'function') {
 			const _orig = helpersController.noScriptErrors;
 			helpersController.noScriptErrors = async function (req, res, error, httpStatus) {
-				if (
-					typeof error === 'string' &&
-					error.startsWith('[[spam-be-gone:') &&
-					req.body &&
-					req.body.noscript !== 'true'
-				) {
-					return res.status(httpStatus).send(error);
+				if (typeof error === 'string' && error.startsWith('[[spam-be-gone:')) {
+					try {
+						const translator = require.main.require('./src/translator');
+						const rawLang = (req.headers['accept-language'] || '').split(',')[0].split(';')[0].trim();
+						const lang = rawLang || Meta.config.defaultLang || 'en-GB';
+						const translated = await translator.translate(error, lang);
+						return res.status(httpStatus).send(translated);
+					} catch (_) {
+						return res.status(httpStatus).send(error);
+					}
 				}
 				return _orig.call(helpersController, req, res, error, httpStatus);
 			};
@@ -277,7 +280,7 @@ Plugin.report = async function (req, res, next) {
 		res.status(200).json({ message: '[[spam-be-gone:user-reported]]' });
 	} catch (err) {
 		winston.error(`[plugins/${pluginData.nbbId}][report-error] ${err.message}`);
-		res.status(400).json({ message: err.message || 'Something went wrong' });
+		res.status(400).json({ message: err.message || '[[spam-be-gone:something-went-wrong]]' });
 	}
 };
 
@@ -292,7 +295,7 @@ Plugin.reportFromQueue = async function (req, res) {
 		res.status(200).json({ message: '[[spam-be-gone:user-reported]]' });
 	} catch (err) {
 		winston.error(`[plugins/${pluginData.nbbId}][report-error] ${err.message}\n${JSON.stringify(submitData, null, 4)}`);
-		res.status(400).json({ message: err.message || 'Something went wrong' });
+		res.status(400).json({ message: err.message || '[[spam-be-gone:something-went-wrong]]' });
 	}
 };
 
@@ -429,7 +432,7 @@ Plugin.checkReply = async function (data, options = {}) {
 	}
 
 	winston.verbose(`[plugins/${pluginData.nbbId}] Post by uid: ${data.req.uid} username: ${userData.username}@${data.req.ip} was flagged as spam and rejected.`);
-	throw new Error('Post content was flagged as spam by Akismet.com');
+	throw new Error('[[spam-be-gone:akismet-spam-detected]]');
 };
 
 // ---------------------------------------------------------------------------
