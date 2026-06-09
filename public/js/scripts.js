@@ -42,7 +42,6 @@ $(function () {
 		}
 		var selectors = [
 			'.alert.alert-danger',
-			'.alert-danger',
 			'[component="alerts"] .alert-danger',
 			'[component="login"] .alert-danger',
 			'[component="login/login"] .alert-danger',
@@ -104,15 +103,19 @@ $(function () {
 			return;
 		}
 
-		var body = document.body;
-		if (body && typeof MutationObserver !== 'undefined') {
+		// Scope observer to the login/content container instead of body
+		var observeTarget = document.querySelector('[component="login"]') ||
+			document.getElementById('content') ||
+			document.body;
+
+		if (typeof MutationObserver !== 'undefined') {
 			loginTurnstile.observer = new MutationObserver(function () {
 				if (hasLoginErrorVisible()) {
 					resetLoginTurnstile();
 					clearLoginErrorWatch();
 				}
 			});
-			loginTurnstile.observer.observe(body, { childList: true, subtree: true, attributes: true });
+			loginTurnstile.observer.observe(observeTarget, { childList: true, subtree: true });
 		}
 
 		// Auto-cleanup if success navigation happens or no error is shown
@@ -145,7 +148,11 @@ $(function () {
 		var component = (el.getAttribute && (el.getAttribute('component') || '')) || '';
 		var action = (el.getAttribute && (el.getAttribute('data-action') || '')) || '';
 		var type = (el.getAttribute && (el.getAttribute('type') || '')) || '';
-		var maybeLogin = component.indexOf('login') !== -1 || action.toLowerCase().indexOf('login') !== -1 || text.indexOf('log in') !== -1 || text.indexOf('login') !== -1 || type === 'submit';
+		var maybeLogin = component.indexOf('login') !== -1 ||
+			action.toLowerCase().indexOf('login') !== -1 ||
+			text.indexOf('log in') !== -1 ||
+			text.indexOf('login') !== -1 ||
+			type === 'submit';
 		if (!maybeLogin) {
 			return;
 		}
@@ -182,9 +189,16 @@ $(function () {
 				if (!target || target.dataset.turnstileRendered === '1') {
 					return;
 				}
+				var resolvedTheme = args.theme || 'auto';
+				if (resolvedTheme === 'auto') {
+					var dataTheme = document.documentElement.getAttribute('data-theme');
+					if (dataTheme === 'dark' || dataTheme === 'light') {
+						resolvedTheme = dataTheme;
+					}
+				}
 				var widgetId = turnstile.render('#' + args.targetId, {
 					sitekey: args.siteKey,
-					theme: args.theme || 'auto',
+					theme: resolvedTheme,
 					size: args.size || 'normal',
 					appearance: args.appearance || 'always',
 					language: args.language || 'auto',
@@ -215,7 +229,7 @@ $(function () {
 				}
 			})
 			.catch(function () {
-				require(['alerts'], function (alerts) { alerts.error('Failed to load Cloudflare Turnstile'); });
+				require(['alerts'], function (alerts) { alerts.error('[[spam-be-gone:turnstile-load-error]]'); });
 			});
 	}
 
@@ -244,8 +258,8 @@ $(function () {
 	function reportUser(url) {
 		require(['alerts'], function (alerts) {
 			$.post(url)
-				.then(function () { alerts.success('User reported!'); })
-				.catch(function (e) { alerts.error(e.responseJSON && e.responseJSON.message || '[spam-be-gone:something-went-wrong]'); });
+				.then(function () { alerts.success('[[spam-be-gone:user-reported]]'); })
+				.catch(function (e) { alerts.error(e.responseJSON && e.responseJSON.message || '[[spam-be-gone:something-went-wrong]]'); });
 		});
 	}
 
